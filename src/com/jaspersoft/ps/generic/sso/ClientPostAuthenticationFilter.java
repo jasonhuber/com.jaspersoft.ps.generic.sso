@@ -22,8 +22,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.Assert;
 
+import com.jaspersoft.jasperserver.api.metadata.common.service.RepositoryService;
+import com.jaspersoft.jasperserver.api.metadata.user.domain.ProfileAttribute;
 import com.jaspersoft.jasperserver.api.metadata.user.domain.impl.client.MetadataUserDetails;
+import com.jaspersoft.jasperserver.api.metadata.user.service.ObjectPermissionService;
+import com.jaspersoft.jasperserver.api.metadata.user.service.ProfileAttributeCategory;
 import com.jaspersoft.jasperserver.api.metadata.user.service.ProfileAttributeService;
+import com.jaspersoft.jasperserver.api.metadata.user.service.TenantService;
+import com.jaspersoft.jasperserver.api.metadata.user.service.UserAuthorityService;
+import com.jaspersoft.jasperserver.api.security.externalAuth.processors.AbstractExternalUserProcessor;
 
 public class ClientPostAuthenticationFilter implements InitializingBean, Filter {
 
@@ -64,13 +71,28 @@ public class ClientPostAuthenticationFilter implements InitializingBean, Filter 
 			return;
 		}
 
+		
+		//this was changed in 6.1.1, so we updated it:
 		String[][] profileAttributes = clientDetails.getProfileAttributes();
 		for (int i= 0; i < profileAttributes.length; i++) {
 			//save profile attribute to database
-			profileAttributeService.setCurrentUserPreferenceValue(profileAttributes[i][0], profileAttributes[i][1]);
+			ProfileAttribute myAttr = profileAttributeService.newProfileAttribute(null);
+			myAttr.setPrincipal(user);
+			myAttr.setAttrName(profileAttributes[i][0]);
+			myAttr.setAttrValue(profileAttributes[i][1]);
+			log.debug("Profile attribute " + i + ": " + profileAttributes[i][0] + "-" + profileAttributes[i][1]);
+			try
+			{
+				profileAttributeService.putProfileAttribute(null, myAttr);
+			}
+			catch (Exception e)
+			{
+				log.error("Exception caught trying to save profile attribute to repository: " + e.toString());	
+			}
 		}
-		//reload the profile attributes from the database
-		user.setAttributes(profileAttributeService.getProfileAttributesForPrincipal(null, user));
+		
+		//set the attributes back on the user object so they are available to current session
+		user.setAttributes(profileAttributeService.getCurrentUserProfileAttributes(null, ProfileAttributeCategory.TENANT));
 		
 		//proceed with other filters
 		chain.doFilter(request, response);

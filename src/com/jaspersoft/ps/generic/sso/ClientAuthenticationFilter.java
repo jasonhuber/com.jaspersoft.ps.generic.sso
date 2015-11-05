@@ -37,6 +37,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 
+//if we use the JSON stuff below then:
+//import net.sf.json.JSONObject;
+//import net.sf.json.JSONSerializer;
+//a couple jars are also needed....
+
 
 import com.jaspersoft.jasperserver.multipleTenancy.MTUserDetails.TenantInfo;
 
@@ -307,6 +312,135 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 			log.error("Error retrieving SSO user info", e);
 			return null;
 		}
+		
+		/*
+		 * alternative JSON processor:
+		 * log.debug("begin token validation program");   
+
+		String token = getToken(req);
+
+		log.debug("received token info : " + token);
+
+		HttpURLConnection conn = null;
+
+		//get user info for the user, including roles and attributes (this is using POST)
+		String userInfoStr = null;
+
+		try {
+			String urlStr = validTokenEndpoint + token;
+	
+			log.debug("constructed URL String : " + urlStr);
+	
+			URL url = new URL(urlStr);
+	
+			log.debug("before Open connection : ");
+			
+			conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+			conn.setDoOutput(true); //this is for POST and PUT
+			conn.setDoInput(true); //this is for GET
+			conn.setUseCaches(false);
+			conn.setAllowUserInteraction(false);
+			
+			log.debug("before response check : ");
+	
+			String userpass = URI_user + ":" + URI_pass;
+			String basicAuth = "Basic " + javax.xml.bind.DatatypeConverter.printBase64Binary(userpass.getBytes());
+			conn.setRequestProperty("Authorization", basicAuth);
+			
+			if (conn.getResponseCode() != 200) 
+				return null;
+	
+			log.debug("got the response back : " + conn.getResponseCode());
+	
+			//Get Response
+			InputStream is = conn.getInputStream();
+	
+			userInfoStr = convertInputStream2String(is);
+	
+			log.info("Successfully made JSON call, results: " + userInfoStr);
+		} catch (Exception e) {
+			log.error("Failed retrieving user info", e);
+		} finally {
+			if(conn != null) {
+				conn.disconnect(); 
+			}
+		}
+	
+		log.debug("Starting to parse JSON");
+		JSONObject json = new JSONObject();
+		try
+		{
+			json = (JSONObject) JSONSerializer.toJSON(userInfoStr);	
+		}
+		catch(Exception e) {
+			log.error("JSON Was invalid. Info Received: " + userInfoStr, e);
+		} 
+		
+		log.debug("JSON Parsed");
+
+		String auth_id = json.getString("username");
+
+		//roles
+		//Currently hardcoding to just include ROLE_USER. You will need to add
+		//to this section if more roles are desired and/or synced from external system.
+		List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
+		authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+		//profile attributes
+		@SuppressWarnings("unchecked")
+		Iterator<String> iter = json.keys();
+		List<String[]> attributesAttr = new ArrayList<String[]>();
+		
+		//For each entry in attributeMap (specified in xml file), get the "key" 
+		//value from the JSON object and set it into our attributes as the new "value"
+		//
+		//i.e. if you have <entry key="amp_user_sid" value="sid"/> defined in the xml, 
+		//the value for "sid" will be stored into Jaspersoft attribute as "user_sid"
+		for (Map.Entry<String, String> entry : attributeMap.entrySet())
+		{
+			try 
+			{
+				attributesAttr.add(new String[]{entry.getValue(), json.getString(entry.getKey())});
+			}
+			catch (net.sf.json.JSONException je)
+			{
+				log.error("Key specified in XML file for mapping (" + entry.getKey() + ") does not exist in JSON response object, skipping");
+			}
+		}		
+		
+		List<String> excludedAttributesList = Arrays.asList(excludeAttributes.split("\\s*,\\s*"));
+		while(iter.hasNext())
+		{
+			String key = iter.next();
+			if (excludedAttributesList.contains(key))
+				continue;
+			String value = json.getString(key);
+			attributesAttr.add(new String[]{key, value});
+		}
+
+		String[][] attributes = new String[attributesAttr.size()][2];
+			Iterator<String[]> attributesIter = attributesAttr.iterator();
+		for (int i = 0; attributesIter.hasNext(); i++) {
+			attributes[i] = attributesIter.next();
+		}
+
+		//organizations
+		//No need to process organizations until there are more than one. 
+		//When creating the ClientUserDetails object, not passing tenants
+		//will force everyone into the base organization (organization_1)
+		//Uncomment section below and create a 'tenant' for the org the 
+		//user should be part of (multiples needed if suborgs are used)
+		
+		
+		List<TenantInfo> tenants = new ArrayList<TenantInfo>();
+		ClientTenantInfo tenant = new ClientTenantInfo(org_name, org_id, null);
+		tenants.add(tenant); 
+		 
+		
+		ClientUserDetails userDetails = new ClientUserDetails(auth_id, authorities, attributes);
+end: alternate JSON*/
+		
 	}
 
 	/**
