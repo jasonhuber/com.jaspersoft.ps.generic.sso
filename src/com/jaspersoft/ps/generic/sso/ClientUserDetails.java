@@ -34,7 +34,8 @@ public class ClientUserDetails implements MTUserDetails, Serializable {
 		this.tenants = tenants;
 		this.authorities = authorities;
 	}
-
+	
+	
 	@Override
 	public String getUsername() {
 		return username;

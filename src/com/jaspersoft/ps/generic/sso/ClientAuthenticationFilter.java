@@ -8,8 +8,6 @@ package com.jaspersoft.ps.generic.sso;
 
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,7 +24,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -35,7 +32,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.StringUtils;
+
 
 //if we use the JSON stuff below then:
 //import net.sf.json.JSONObject;
@@ -50,13 +47,6 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 
 	private static int MINUTE_OFFSET = -2;
 	private static final String DATETIME_FORMAT = "MM/dd/yyyy hh:mm:ss a XXX";
-	private static String ORG_IDENTIFIER = "orgId=";
-	private static String ROLE_IDENTIFIER = "roles=";
-	private static String USER_IDENTIFIER = "username=";
-	private static String DATE_IDENTIFIER = "datetime=";
-	private static String ORG_SEPARATOR = "/";
-	private static String ROLE_SEPARATOR = "%";
-	private static String TOKEN_SEPARATOR = "|";
 
 	private static Log log = LogFactory.getLog(ClientAuthenticationFilter.class);
 
@@ -64,8 +54,9 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 	private String currentToken;
 
 	private String tokenSessionAttribute ="clientAuthToken";
-	public ClientAuthenticationFilter(String orgIdentifier, String roleIdentifier, String userIdentifier, String datetimeIdentifier, String orgSeparator, String roleSeparator, String tokenSeparator, int timeOffset) {
-	
+
+	public ClientAuthenticationFilter() {
+
 	}
 
 	/**
@@ -133,7 +124,7 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 		//set a flag that will force post-processing of things like profile attributes.
 		//SET THIS TO "true" IF YOU ADD PROFILE ATTRIBUTES
 		//SET THIS TO "true" IF YOU ADD PROFILE ATTRIBUTES
-		request.setAttribute("clientAuth", "false");
+		request.setAttribute("clientAuth", "true");
 
 		//continue with filter chain
 		chain.doFilter(req, response);
@@ -145,13 +136,7 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 	 */
 	private ClientUserDetails getUserDetails(ServletRequest req) {
 		try {
-			//get datetime timestamp
-			String strDatetime = getDatetimeFromToken(currentToken);
-			if (!isTimestampValid(strDatetime))
-			{
-				return null;
-			}
-
+	
 			//get user info
 			//String username = getUsernameFromToken(currentToken);
 			String username = "Jason";
@@ -164,13 +149,12 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 			List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
 			authorities.add(new SimpleGrantedAuthority("ROLE_JASON"));
 				
-			String[][] attributes = new String[attributeList.size()][];
-			Iterator<String[]> attributesIter = attributeList.iterator();
-			for (int i = 0; i < attributes.length; i++) {
-				attributes[i] = attributesIter.next();
-			}
-
-			ClientUserDetails userDetails = new ClientUserDetails(username, tenants, authorities, null);
+			String[][] attributes = new String[1][2];
+			attributes[0][0] ="Campus";
+			attributes[0][1] ="ASU";
+			
+			
+			ClientUserDetails userDetails = new ClientUserDetails(username, tenants, authorities, attributes);
 			return userDetails;
 
 		} catch (Exception e){
@@ -346,55 +330,6 @@ end: alternate JSON*/
 
 	
 	/**
-	 * Retrieves organization(s) from provided token. 
-	 * Looks for value after ORG_IDENTIFIER in token.
-	 * 
-	 * @param token
-	 * @return String The organization(s)
-	 */
-	private String getOrgsFromToken(String token) {
-		//pull out organization(s)
-		return getElementFromToken(token, ORG_IDENTIFIER);
-	}
-
-	/**
-	 * Retrieves role(s) from provided token. 
-	 * Looks for value after ROLE_IDENTIFIER in token.
-	 * 
-	 * @param token
-	 * @return String The role(s)
-	 */
-	private String getRolesFromToken(String token) {
-		//pull out role(s)
-		return getElementFromToken(token, ROLE_IDENTIFIER);
-	}
-
-	/**
-	 * Retrieves username from provided token. 
-	 * Looks for value after USER_IDENTIFIER in token.
-	 * 
-	 * @param token
-	 * @return String The username
-	 */
-	private String getUsernameFromToken(String token) {
-		//pull out username
-		return getElementFromToken(token, USER_IDENTIFIER);
-	}
-
-	/**
-	 * Retrieves username from provided token. 
-	 * Looks for value after USER_IDENTIFIER in token.
-	 * 
-	 * @param token
-	 * @return String The username
-	 */
-	private String getDatetimeFromToken(String token) {
-		//pull out username
-		return getElementFromToken(token, DATE_IDENTIFIER);
-	}
-
-
-	/**
 	 * This is the validation that the request contains all needed information.
 	 * Don't add too much functionality here as this is checked for all
 	 * requests.
@@ -407,12 +342,6 @@ end: alternate JSON*/
 		return (aToken != null) && !aToken.trim().equals("");
 	}
 
-	/**
-	 * Retrieves the token from the give request object
-	 * 
-	 * @param req
-	 * @return String The token from the request, null if not found
-	 */
 
 
 	// -- helper methods
