@@ -64,39 +64,8 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 	private String currentToken;
 
 	private String tokenSessionAttribute ="clientAuthToken";
-
-	/**
-	 * The security xml file (applicationContext-security-web.xml or similar) will
-	 * define this bean and needs to have lines such as the following to pass in the
-	 * url information:
-	 * 
-	 * <constructor-arg name="orgIdentifier" value="orgId" />
-	 * <constructor-arg name="roleIdentifier" value="roles" />
-	 * <constructor-arg name="userIdentifier" value="username" />
-	 * <constructor-arg name="datetimeIdentifier" value="datetime" />
-	 * <constructor-arg name="orgSeparator" value="/" />
-	 * <constructor-arg name="roleSeparator" value="%" />
-	 * <constructor-arg name="tokenSeparator" value="|" />
-	 * <constructor-arg name="timeOffset" type="int" value="-2" />
-	 * 
-	 * @param orgIdentifier
-	 * @param roleIdentifier
-	 * @param userIdentifier
-	 * @param datetimeIdentifier
-	 * @param orgSeparator
-	 * @param roleSeparator
-	 * @param tokenSeparator
-	 * @param timeOffset
-	 */
 	public ClientAuthenticationFilter(String orgIdentifier, String roleIdentifier, String userIdentifier, String datetimeIdentifier, String orgSeparator, String roleSeparator, String tokenSeparator, int timeOffset) {
-		ORG_IDENTIFIER = orgIdentifier.concat("=");
-		ROLE_IDENTIFIER = roleIdentifier.concat("=");
-		USER_IDENTIFIER = userIdentifier.concat("=");
-		DATE_IDENTIFIER = datetimeIdentifier.concat("=");
-		ORG_SEPARATOR = orgSeparator;
-		ROLE_SEPARATOR = roleSeparator;
-		TOKEN_SEPARATOR = tokenSeparator;
-		MINUTE_OFFSET = timeOffset;
+	
 	}
 
 	/**
@@ -116,23 +85,7 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 			chain.doFilter(request, response);
 			return;
 		}
-
-		String strToken = getToken(request);
 		
-		String decryptedToken = decryptToken(strToken);
-		if (decryptedToken == null)
-		{
-			chain.doFilter(request, response);
-			return;
-		}
-		
-		currentToken = decodeToken(decryptedToken);
-		if (currentToken == null)
-		{
-			chain.doFilter(request, response);
-			return;
-		}
-
 		//retrieve existing authentication
 		Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -188,36 +141,6 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 
 
 	/**
-	 * Decrypts the provided token utilizing the Rfc2898Decryptor 
-	 * 
-	 * @param thisToken
-	 * @return String The decrypted token
-	 */
-	private String decryptToken(String thisToken) {
-	//TODO: implement this if needed
-		return thisToken;
-	}
-
-
-	/**
-	 * Decodes the provided string (using URLDecoder)
-	 * 
-	 * @param encodedToken
-	 * @return String The decoded string
-	 */
-	private String decodeToken(String encodedToken) {
-		try {
-			String decodedToken = URLDecoder.decode(encodedToken.replace("+", "%2B"), "UTF-8");
-			return decodedToken;
-		
-		} catch (UnsupportedEncodingException e) {
-			log.error("Exception trying to decode URL: " + ExceptionUtils.getStackTrace(e));
-			return null;
-		}
-	}
-
-
-	/**
 	 * Validates session token and retrieves all user details
 	 */
 	private ClientUserDetails getUserDetails(ServletRequest req) {
@@ -230,80 +153,22 @@ public class ClientAuthenticationFilter implements InitializingBean, Filter {
 			}
 
 			//get user info
-			String username = getUsernameFromToken(currentToken);
-			//if no user credentials, return null
-			if (username == null) {
-				if (log.isDebugEnabled()) {
-					log.debug("No username provided.");
-				}
-				return null;
-			}
-			
-			//get org info
-			List<TenantInfo> tenants = getOrganizations(currentToken);
-
-			if (log.isDebugEnabled()) {
-				log.debug("Successfully retrieved ORGANIZATION (client) data:\n");
-				log.debug("tenant list = " + tenants + "\n");
-			}
+			//String username = getUsernameFromToken(currentToken);
+			String username = "Jason";
+		
+			List<TenantInfo> tenants = new ArrayList<TenantInfo>();
+			ClientTenantInfo tenant = new ClientTenantInfo("jasonorg", "JasonOrg", null);
+			tenants.add(tenant);
 
 			//roles
 			List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
-			String roles = getRolesFromToken(currentToken);
-			if (!roles.contains(ROLE_SEPARATOR))
-			{
-				authorities.add(new SimpleGrantedAuthority(roles));
-				log.debug("Only one role passed: " + roles);
+			authorities.add(new SimpleGrantedAuthority("ROLE_JASON"));
+				
+			String[][] attributes = new String[attributeList.size()][];
+			Iterator<String[]> attributesIter = attributeList.iterator();
+			for (int i = 0; i < attributes.length; i++) {
+				attributes[i] = attributesIter.next();
 			}
-			else
-			{
-				String[] strArrayRoles = roles.split(ROLE_SEPARATOR);
-				for (int i=0; i<strArrayRoles.length; i++) {
-					String currentRole = strArrayRoles[i];
-					authorities.add(new SimpleGrantedAuthority(currentRole));
-					log.debug("Multiple Roles passed, Role #" + i + ": " + currentRole);
-				} 				
-			}
-
-			//Hard coding all users to have only ROLE_USER
-			//Modify this if roles should expand in the future and you want SSO code to take care of this
-//			GrantedAuthority[] authorities = new GrantedAuthority[1];
-//			authorities[0] = new GrantedAuthorityImpl("ROLE_USER");
-			
-			//get profile attributes
-			//Uncomment below section to grab attributes (clientAccessList) again and change the null paramater to attributes in call below this section
-			//Also make sure to re-add the post auth bean/filter to the security xml file
-			
-//			String attributesQuery = "select client_id from ag2.sec_user_clients where sec_usr_id = ? "
-//					+ "union "
-//					+ "select client_id from ag2.sec_user_clients where sec_grp_id in "
-//					+ "(select sec_grp_id from ag2.sec_grp_mbrs where sec_usr_id = ?)";
-//
-//			ps = conn.prepareStatement(attributesQuery);
-//			ps.setLong(1, secUsrID);
-//			ps.setLong(2, secUsrID);
-//			rs = ps.executeQuery();
-//			List<String[]> attributeList = new ArrayList<String[]>();
-//			String accessibleClientIDList = "";
-//			
-//			while (rs.next()) {
-//				accessibleClientIDList = accessibleClientIDList.concat(rs.getString(1) + ",");
-//			}
-//			accessibleClientIDList = accessibleClientIDList.substring(0, accessibleClientIDList.lastIndexOf(","));
-//			attributeList.add(new String[]{"accessClients", accessibleClientIDList});
-//			rs.close();
-//			ps.close();
-//
-//			if (log.isDebugEnabled()) {
-//				log.debug("Successfully retrieved PROFILE ATTRIBUTE data:\n");
-//				log.debug("accessibleClientIDList = " + accessibleClientIDList + "\n");
-//			}
-//
-//			String[][] attributes = new String[attributeList.size()][];
-//			Iterator<String[]> attributesIter = attributeList.iterator();
-//			for (int i = 0; i < attributes.length; i++) {
-//				attributes[i] = attributesIter.next();
-//			}
 
 			ClientUserDetails userDetails = new ClientUserDetails(username, tenants, authorities, null);
 			return userDetails;
@@ -479,76 +344,7 @@ end: alternate JSON*/
 	}
 
 
-	/**
-	 * Retrieves a list of TenantInfo objects. These are the organizations that are in
-	 * the supplied token. Can be one or many - if more than one is found, multiple
-	 * tenants will be created and they will have an ORG->SUB-ORG relationship.
-	 * 
-	 * @return List<TenantInfo> The List of organizations
-	 */
-	private List<TenantInfo> getOrganizations(String thisToken) {
-		//get org info
-		List<TenantInfo> tenants = new ArrayList<TenantInfo>();
-		String orgId = null;
-//		String orgName = null;
-
-		
-		String orgIdList = getOrgsFromToken(thisToken);
-		//String orgNameList = rs.getString(3);
-		int pathLen = StringUtils.countOccurrencesOf(orgIdList, ORG_SEPARATOR) + 1;
-		int slashLocation = 0;
-		//int pipeLocation = 0;
-		
-		ClientTenantInfo tenant = null;
-		if (pathLen == 1)
-		{
-			//orgId = orgIdList.substring(0);
-			//orgName = orgNameList.substring(1);
-//			tenant = new ClientTenantInfo(orgId, orgName, null);
-			tenant = new ClientTenantInfo(orgIdList, orgIdList, null);
-			tenants.add(tenant);
-		}
-		else if (pathLen > 1)
-		{
-			for (int i=0; i<pathLen; i++)
-			{
-				slashLocation = orgIdList.indexOf(ORG_SEPARATOR);
-				if (log.isDebugEnabled())
-				{
-					log.debug("orgIdList: " + orgIdList);
-					log.debug("slashlocation: " + slashLocation);
-				}
-				//pipeLocation = orgNameList.indexOf("|", 1);
-				if (slashLocation > -1)
-				{
-					orgId = orgIdList.substring(0, slashLocation);
-					orgIdList = orgIdList.substring(slashLocation + 1);
-				}
-				else
-					orgId = orgIdList;
-				
-//				if (pipeLocation > -1)
-//				{
-//					orgName = orgNameList.substring(1, pipeLocation);
-//					orgNameList = orgNameList.substring(pipeLocation);
-//				}
-//				else
-//					orgName = orgNameList.substring(1);
-				
-//				tenant = new ClientTenantInfo(orgId, orgName, null);
-				if (log.isDebugEnabled())
-				{
-					log.debug("Current Org: " + orgId);
-				}
-				tenant = new ClientTenantInfo(orgId, orgId, null);
-				tenants.add(tenant);
-				
-			}
-		}
-		
-		return tenants;
-	}
-
+	
 	/**
 	 * Retrieves organization(s) from provided token. 
 	 * Looks for value after ORG_IDENTIFIER in token.
@@ -597,36 +393,6 @@ end: alternate JSON*/
 		return getElementFromToken(token, DATE_IDENTIFIER);
 	}
 
-//	private String getAtrributesFromToken(String currentEncryptedToken) {
-//		// TODO write this method if attributes are included in the future
-//		//decrypt encrypted token
-//		//pull out attributes
-//		return currentEncryptedToken;
-//	}
-
-	/**
-	 * Retrieves value from token based on supplied identifier
-	 * ("username=", "orgId=", "role=")
-	 * 
-	 * @param token
-	 * @param identifier
-	 * @return String The value from the token
-	 */
-	private String getElementFromToken(String token, String identifier) {
-		//pull out element(s)
-		int identifierLength = identifier.length();
-		String strElement = token.substring(token.indexOf(identifier) + identifierLength);
-		int tokenSeperatorIndex = strElement.indexOf(TOKEN_SEPARATOR);
-		if (tokenSeperatorIndex > -1)
-		{
-			strElement = strElement.substring(0, strElement.indexOf(TOKEN_SEPARATOR));
-		}
-		if (log.isDebugEnabled())
-		{
-			log.debug("strElement(s) provided, looking for data after " + identifier + " value is: " + strElement);
-		}
-		return strElement;	
-	}
 
 	/**
 	 * This is the validation that the request contains all needed information.
@@ -647,13 +413,7 @@ end: alternate JSON*/
 	 * @param req
 	 * @return String The token from the request, null if not found
 	 */
-	private String getToken(ServletRequest req) {
-		String aToken = req.getParameter(authToken);
-		if (aToken != null) {
-			aToken = aToken.trim();
-		}
-		return aToken;
-	}
+
 
 	// -- helper methods
 	@Override

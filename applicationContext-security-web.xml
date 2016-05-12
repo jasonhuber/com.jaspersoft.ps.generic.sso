@@ -20,14 +20,6 @@
 	<bean id="ssoAuthFilter"
 		class="com.jaspersoft.ps.generic.sso.ClientAuthenticationFilter">
 		<property name="authToken" value="token" />
-		<constructor-arg name="orgIdentifier" value="orgId" />
-		<constructor-arg name="roleIdentifier" value="roles" />
-		<constructor-arg name="userIdentifier" value="username" />
-		<constructor-arg name="datetimeIdentifier" value="datetime" />
-		<constructor-arg name="orgSeparator" value="/" />
-		<constructor-arg name="roleSeparator" value="%" />
-		<constructor-arg name="tokenSeparator" value="|" />
-		<constructor-arg name="timeOffset" type="int" value="-2" />
 	</bean>
 
 	
