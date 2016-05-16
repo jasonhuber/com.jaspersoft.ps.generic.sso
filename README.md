@@ -10,9 +10,9 @@ it is good for 6.2.1 IF you change the referenced xml file...
 ### this change is necessary in 6.1.X and up to get attributes to sync...
 I only had to remove the line:
 
-<security:protect
+&lt;security:protect
 method="com.jaspersoft.jasperserver.api.metadata.user.service.ProfileAttributeService.putProfileAttribute"
-access="ROLE_ADMINISTRATOR, ACL_ATTRIBUTE_USER_ADMIN"/>
+access="ROLE_ADMINISTRATOR, ACL_ATTRIBUTE_USER_ADMIN"/&gt;
 
 in applicationContext-security.xml
 
