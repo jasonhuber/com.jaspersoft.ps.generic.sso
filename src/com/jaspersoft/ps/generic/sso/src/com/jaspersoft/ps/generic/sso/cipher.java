@@ -18,11 +18,11 @@ public class cipher implements CipherI
 	@Override
 	public String decrypt(String cipherText) {
 	
+	//the cipherText can be anything. The following code just needs to return a string in the following format (defined in the applicationContext-externalAuth-preAuth-mt
+		//u=obama|r=PRESIDENT,HUSBAND|o=WhiteHouse|pa1=USA,Kenya|pa2=Washington -->
 		
 		JSONObject json = util.GetJSONfromURL(cipherText, validTokenEndpoint);
-		
-		//u=obama|r=PRESIDENT,HUSBAND|o=WhiteHouse|pa1=USA,Kenya|pa2=Washington -->
-
+	
 		String ppToken = "u=~username~|r=~roles~|o=~organization~|";
 
 		try {
